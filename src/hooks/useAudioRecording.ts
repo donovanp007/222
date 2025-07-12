@@ -1,19 +1,41 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
+import { trackTranscription } from "@/utils/apiUsageTracker";
 
 export type RecordingState = "idle" | "recording" | "paused" | "stopped";
+
+export interface RecordingSegment {
+  id: string;
+  startTime: number;
+  endTime?: number;
+  duration: number;
+  content?: string; // Transcribed content for this segment
+}
+
+export interface RecordingSession {
+  id: string;
+  startTime: Date;
+  endTime?: Date;
+  totalDuration: number;
+  segments: RecordingSegment[];
+  fullTranscription: string;
+}
 
 export function useAudioRecording() {
   const [recordingState, setRecordingState] = useState<RecordingState>("idle");
   const [duration, setDuration] = useState(0);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [isTranscribing, setIsTranscribing] = useState(false);
+  const [currentSession, setCurrentSession] = useState<RecordingSession | null>(null);
+  const [currentSegment, setCurrentSegment] = useState<RecordingSegment | null>(null);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const sessionStartTimeRef = useRef<number>(0);
+  const segmentStartTimeRef = useRef<number>(0);
 
   const initializeRecording = useCallback(async () => {
     try {
@@ -64,6 +86,31 @@ export function useAudioRecording() {
     if (!initialized || !mediaRecorderRef.current) return false;
 
     try {
+      const now = Date.now();
+      sessionStartTimeRef.current = now;
+      segmentStartTimeRef.current = now;
+
+      // Create new session
+      const sessionId = `session_${now}`;
+      const segmentId = `segment_${now}_1`;
+      
+      const newSegment: RecordingSegment = {
+        id: segmentId,
+        startTime: now,
+        duration: 0
+      };
+
+      const newSession: RecordingSession = {
+        id: sessionId,
+        startTime: new Date(now),
+        totalDuration: 0,
+        segments: [newSegment],
+        fullTranscription: ''
+      };
+
+      setCurrentSession(newSession);
+      setCurrentSegment(newSegment);
+
       mediaRecorderRef.current.start(1000); // Collect data every second
       setRecordingState("recording");
       setDuration(0);
@@ -82,7 +129,31 @@ export function useAudioRecording() {
   }, [initializeRecording]);
 
   const stopRecording = useCallback(() => {
-    if (mediaRecorderRef.current && recordingState === "recording") {
+    if (mediaRecorderRef.current && (recordingState === "recording" || recordingState === "paused") && currentSegment && currentSession) {
+      const now = Date.now();
+      
+      // Update final segment
+      const finalSegment: RecordingSegment = {
+        ...currentSegment,
+        endTime: now,
+        duration: recordingState === "recording" 
+          ? Math.floor((now - currentSegment.startTime) / 1000)
+          : currentSegment.duration
+      };
+
+      // Update final session
+      const finalSession: RecordingSession = {
+        ...currentSession,
+        endTime: new Date(now),
+        totalDuration: Math.floor((now - sessionStartTimeRef.current) / 1000),
+        segments: currentSession.segments.map(seg => 
+          seg.id === currentSegment.id ? finalSegment : seg
+        )
+      };
+
+      setCurrentSession(finalSession);
+      setCurrentSegment(finalSegment);
+
       mediaRecorderRef.current.stop();
       setRecordingState("stopped");
 
@@ -95,12 +166,30 @@ export function useAudioRecording() {
       return true;
     }
     return false;
-  }, [recordingState]);
+  }, [recordingState, currentSegment, currentSession]);
 
   const pauseRecording = useCallback(() => {
-    if (mediaRecorderRef.current && recordingState === "recording") {
+    if (mediaRecorderRef.current && recordingState === "recording" && currentSegment && currentSession) {
       mediaRecorderRef.current.pause();
       setRecordingState("paused");
+
+      // Update current segment end time
+      const now = Date.now();
+      const updatedSegment: RecordingSegment = {
+        ...currentSegment,
+        endTime: now,
+        duration: Math.floor((now - currentSegment.startTime) / 1000)
+      };
+
+      const updatedSession: RecordingSession = {
+        ...currentSession,
+        segments: currentSession.segments.map(seg => 
+          seg.id === currentSegment.id ? updatedSegment : seg
+        )
+      };
+
+      setCurrentSegment(updatedSegment);
+      setCurrentSession(updatedSession);
 
       // Pause timer
       if (timerRef.current) {
@@ -111,10 +200,29 @@ export function useAudioRecording() {
       return true;
     }
     return false;
-  }, [recordingState]);
+  }, [recordingState, currentSegment, currentSession]);
 
   const resumeRecording = useCallback(() => {
-    if (mediaRecorderRef.current && recordingState === "paused") {
+    if (mediaRecorderRef.current && recordingState === "paused" && currentSession) {
+      const now = Date.now();
+      segmentStartTimeRef.current = now;
+
+      // Create new segment for resumed recording
+      const segmentId = `segment_${now}_${currentSession.segments.length + 1}`;
+      const newSegment: RecordingSegment = {
+        id: segmentId,
+        startTime: now,
+        duration: 0
+      };
+
+      const updatedSession: RecordingSession = {
+        ...currentSession,
+        segments: [...currentSession.segments, newSegment]
+      };
+
+      setCurrentSegment(newSegment);
+      setCurrentSession(updatedSession);
+
       mediaRecorderRef.current.resume();
       setRecordingState("recording");
 
@@ -126,7 +234,7 @@ export function useAudioRecording() {
       return true;
     }
     return false;
-  }, [recordingState]);
+  }, [recordingState, currentSession]);
 
   const resetRecording = useCallback(() => {
     // Stop any ongoing recording
@@ -145,7 +253,11 @@ export function useAudioRecording() {
     setDuration(0);
     setAudioBlob(null);
     setIsTranscribing(false);
+    setCurrentSession(null);
+    setCurrentSegment(null);
     audioChunksRef.current = [];
+    sessionStartTimeRef.current = 0;
+    segmentStartTimeRef.current = 0;
 
     // Clean up stream
     if (streamRef.current) {
@@ -154,7 +266,7 @@ export function useAudioRecording() {
     }
   }, [recordingState]);
 
-  const transcribeAudio = useCallback(async (audioBlob: Blob, apiKey: string) => {
+  const transcribeAudio = useCallback(async (audioBlob: Blob, apiKey: string, language: string = 'auto') => {
     if (!audioBlob || !apiKey) {
       throw new Error("Audio blob and API key are required");
     }
@@ -165,7 +277,11 @@ export function useAudioRecording() {
       const formData = new FormData();
       formData.append('file', audioBlob, 'audio.webm');
       formData.append('model', 'whisper-1');
-      formData.append('language', 'en'); // Can be made configurable
+      
+      // Only add language parameter if not auto-detect
+      if (language !== 'auto') {
+        formData.append('language', language);
+      }
 
       const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
         method: 'POST',
@@ -180,7 +296,18 @@ export function useAudioRecording() {
       }
 
       const result = await response.json();
-      return result.text;
+      
+      // Track API usage
+      trackTranscription(audioBlob);
+      
+      // Add language detection info to the result
+      const detectedLanguage = result.language || 'unknown';
+      
+      return {
+        text: result.text,
+        detectedLanguage,
+        duration: result.duration || 0
+      };
     } catch (error) {
       console.error("Transcription error:", error);
       throw error;
@@ -200,12 +327,43 @@ export function useAudioRecording() {
     resetRecording();
   }, [resetRecording]);
 
+  // Helper function to format timestamps
+  const formatTimestamp = useCallback((timestamp: number) => {
+    const date = new Date(timestamp);
+    return date.toLocaleTimeString('en-ZA', { 
+      hour12: false,
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+  }, []);
+
+  // Get session summary with timestamps
+  const getSessionSummary = useCallback(() => {
+    if (!currentSession) return null;
+    
+    return {
+      ...currentSession,
+      formattedStartTime: formatTimestamp(currentSession.startTime.getTime()),
+      formattedEndTime: currentSession.endTime ? formatTimestamp(currentSession.endTime.getTime()) : null,
+      formattedDuration: formatDuration(currentSession.totalDuration),
+      segmentSummaries: currentSession.segments.map(segment => ({
+        ...segment,
+        formattedStartTime: formatTimestamp(segment.startTime),
+        formattedEndTime: segment.endTime ? formatTimestamp(segment.endTime) : null,
+        formattedDuration: formatDuration(segment.duration)
+      }))
+    };
+  }, [currentSession, formatTimestamp, formatDuration]);
+
   return {
     // State
     recordingState,
     duration,
     audioBlob,
     isTranscribing,
+    currentSession,
+    currentSegment,
 
     // Actions
     startRecording,
@@ -217,6 +375,8 @@ export function useAudioRecording() {
 
     // Utilities
     formatDuration,
+    formatTimestamp,
+    getSessionSummary,
     cleanup,
 
     // Raw refs for advanced usage

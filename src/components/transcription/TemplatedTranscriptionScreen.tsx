@@ -1,16 +1,19 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { ArrowLeft, Mic, Square, Save, Settings, FileText, Sparkles, RotateCcw, Code, AlertCircle } from "lucide-react";
+import { ArrowLeft, Mic, Square, Save, Settings, FileText, Sparkles, RotateCcw, Code, AlertCircle, Pause, Play, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ApiSettings, getStoredApiKey } from "../settings/ApiSettings";
+import { LanguageSettings, getSelectedLanguage } from "../settings/LanguageSettings";
 import { TemplateSelector } from "../templates/TemplateSelector";
 import { useAudioRecording } from "@/hooks/useAudioRecording";
 import { categorizeContent, suggestTemplate, aiCategorizeContent } from "@/utils/contentCategorization";
+import { createIntelligentMedicalNote, IntelligentAnalysis } from "@/utils/intelligentFormatting";
+import { IntelligentMedicalNote } from "./IntelligentMedicalNote";
 import { Template, SECTION_TYPES } from "@/types/template";
 import { DEFAULT_TEMPLATES } from "@/data/defaultTemplates";
 import { Patient } from "@/types";
@@ -27,11 +30,15 @@ export function TemplatedTranscriptionScreen({ patient, onBack, onSaveSession }:
     duration,
     audioBlob,
     isTranscribing,
+    currentSession,
     startRecording,
     stopRecording,
+    pauseRecording,
+    resumeRecording,
     resetRecording,
     transcribeAudio,
     formatDuration,
+    formatTimestamp,
     streamRef,
   } = useAudioRecording();
 
@@ -44,6 +51,9 @@ export function TemplatedTranscriptionScreen({ patient, onBack, onSaveSession }:
   const [autoCategorizationEnabled] = useState(true);
   const [isAiCategorizing, setIsAiCategorizing] = useState(false);
   const [aiCategorizationError, setAiCategorizationError] = useState<string | null>(null);
+  const [intelligentAnalysis, setIntelligentAnalysis] = useState<IntelligentAnalysis | null>(null);
+  const [isGeneratingIntelligentNote, setIsGeneratingIntelligentNote] = useState(false);
+  const [showIntelligentView, setShowIntelligentView] = useState(true);
   
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
@@ -74,12 +84,14 @@ export function TemplatedTranscriptionScreen({ patient, onBack, onSaveSession }:
     setTranscriptionError(null);
     
     try {
-      const text = await transcribeAudio(audioBlob, apiKey);
-      setRawTranscription(text);
+      const selectedLanguage = getSelectedLanguage();
+      const result = await transcribeAudio(audioBlob, apiKey, selectedLanguage);
+      const transcriptionText = typeof result === 'string' ? result : result.text;
+      setRawTranscription(transcriptionText);
       
       // Auto-suggest template if none selected
       if (!selectedTemplate && autoCategorizationEnabled) {
-        const suggestion = suggestTemplate(text, DEFAULT_TEMPLATES);
+        const suggestion = suggestTemplate(transcriptionText, DEFAULT_TEMPLATES);
         if (suggestion && suggestion.confidence > 0.4) {
           const suggestedTemplate = DEFAULT_TEMPLATES.find(t => t.id === suggestion.templateId);
           if (suggestedTemplate) {
@@ -90,7 +102,11 @@ export function TemplatedTranscriptionScreen({ patient, onBack, onSaveSession }:
       
       // Auto-categorize content if template is selected
       if (selectedTemplate && autoCategorizationEnabled) {
-        await aiCategorizeTranscription(text, selectedTemplate);
+        if (showIntelligentView) {
+          await generateIntelligentNote(transcriptionText, selectedTemplate);
+        } else {
+          await aiCategorizeTranscription(transcriptionText, selectedTemplate);
+        }
       }
     } catch (error) {
       console.error("Transcription failed:", error);
@@ -119,6 +135,34 @@ export function TemplatedTranscriptionScreen({ patient, onBack, onSaveSession }:
     }
     
     setTemplateData(newTemplateData);
+  };
+
+  const generateIntelligentNote = async (text: string, template: Template) => {
+    setIsGeneratingIntelligentNote(true);
+    setAiCategorizationError(null);
+    
+    try {
+      const patientContext = `Patient: ${patient.name}, Age: ${patient.age}`;
+      const analysis = await createIntelligentMedicalNote(text, template, patientContext);
+      setIntelligentAnalysis(analysis);
+      
+      // Also populate template data for compatibility
+      const newTemplateData = { ...templateData };
+      if (analysis.formattedSections) {
+        for (const section of analysis.formattedSections) {
+          newTemplateData[section.sectionId] = section.content;
+        }
+        setTemplateData(newTemplateData);
+      }
+      
+    } catch (error) {
+      console.error('Intelligent note generation failed:', error);
+      setAiCategorizationError('AI analysis failed. Using basic categorization...');
+      // Fallback to basic categorization
+      await aiCategorizeTranscription(text, template);
+    } finally {
+      setIsGeneratingIntelligentNote(false);
+    }
   };
 
   const aiCategorizeTranscription = async (text: string, template: Template) => {
@@ -236,6 +280,8 @@ export function TemplatedTranscriptionScreen({ patient, onBack, onSaveSession }:
     setTemplateData({});
     setTranscriptionError(null);
     setSelectedTemplate(null);
+    setIntelligentAnalysis(null);
+    setIsGeneratingIntelligentNote(false);
   };
 
   return (
@@ -281,11 +327,14 @@ export function TemplatedTranscriptionScreen({ patient, onBack, onSaveSession }:
                     Settings
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="sm:max-w-md">
+                <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto">
                   <DialogHeader>
-                    <DialogTitle>API Configuration</DialogTitle>
+                    <DialogTitle>Settings</DialogTitle>
                   </DialogHeader>
-                  <ApiSettings />
+                  <div className="space-y-6">
+                    <ApiSettings />
+                    <LanguageSettings />
+                  </div>
                 </DialogContent>
               </Dialog>
 
@@ -306,7 +355,11 @@ export function TemplatedTranscriptionScreen({ patient, onBack, onSaveSession }:
                       setShowTemplateSelector(false);
                       // Re-categorize existing transcription if available
                       if (rawTranscription && autoCategorizationEnabled) {
-                        aiCategorizeTranscription(rawTranscription, template);
+                        if (showIntelligentView) {
+                          generateIntelligentNote(rawTranscription, template);
+                        } else {
+                          aiCategorizeTranscription(rawTranscription, template);
+                        }
                       }
                     }}
                     selectedTemplateId={selectedTemplate?.id}
@@ -349,9 +402,13 @@ export function TemplatedTranscriptionScreen({ patient, onBack, onSaveSession }:
                     {recordingState === "recording" && (
                       <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
                     )}
+                    {recordingState === "paused" && (
+                      <div className="w-3 h-3 bg-orange-500 rounded-full" />
+                    )}
                     <span className="text-lg font-medium text-gray-900">
                       {recordingState === "idle" && "Ready to Record"}
                       {recordingState === "recording" && "Recording..."}
+                      {recordingState === "paused" && "Recording Paused"}
                       {recordingState === "stopped" && "Recording Complete"}
                       {isTranscribing && "Transcribing..."}
                     </span>
@@ -387,13 +444,41 @@ export function TemplatedTranscriptionScreen({ patient, onBack, onSaveSession }:
                   )}
 
                   {recordingState === "recording" && (
-                    <Button
-                      size="lg"
-                      onClick={stopRecording}
-                      className="w-16 h-16 rounded-full bg-red-500 hover:bg-red-600 border-0 shadow-lg hover:shadow-xl transition-all duration-200"
-                    >
-                      <Square className="w-6 h-6" />
-                    </Button>
+                    <div className="flex space-x-4">
+                      <Button
+                        size="lg"
+                        onClick={pauseRecording}
+                        className="w-16 h-16 rounded-full bg-orange-500 hover:bg-orange-600 border-0 shadow-lg hover:shadow-xl transition-all duration-200"
+                      >
+                        <Pause className="w-6 h-6" />
+                      </Button>
+                      <Button
+                        size="lg"
+                        onClick={stopRecording}
+                        className="w-16 h-16 rounded-full bg-red-500 hover:bg-red-600 border-0 shadow-lg hover:shadow-xl transition-all duration-200"
+                      >
+                        <Square className="w-6 h-6" />
+                      </Button>
+                    </div>
+                  )}
+
+                  {recordingState === "paused" && (
+                    <div className="flex space-x-4">
+                      <Button
+                        size="lg"
+                        onClick={resumeRecording}
+                        className="w-16 h-16 rounded-full bg-green-500 hover:bg-green-600 border-0 shadow-lg hover:shadow-xl transition-all duration-200"
+                      >
+                        <Play className="w-6 h-6" />
+                      </Button>
+                      <Button
+                        size="lg"
+                        onClick={stopRecording}
+                        className="w-16 h-16 rounded-full bg-red-500 hover:bg-red-600 border-0 shadow-lg hover:shadow-xl transition-all duration-200"
+                      >
+                        <Square className="w-6 h-6" />
+                      </Button>
+                    </div>
                   )}
 
                   {recordingState === "stopped" && (
@@ -420,7 +505,7 @@ export function TemplatedTranscriptionScreen({ patient, onBack, onSaveSession }:
                 </div>
 
                 {/* Transcription Loading/Error */}
-                {(isTranscribing || isAiCategorizing) && (
+                {(isTranscribing || isAiCategorizing || isGeneratingIntelligentNote) && (
                   <div className="flex justify-center">
                     <div className="flex flex-col items-center space-y-3 text-gray-600">
                       {/* Elegant pulsing animation */}
@@ -439,9 +524,13 @@ export function TemplatedTranscriptionScreen({ patient, onBack, onSaveSession }:
                         {isAiCategorizing && (
                           <div className="text-sm font-medium text-gray-700">AI Analysis in Progress</div>
                         )}
+                        {isGeneratingIntelligentNote && (
+                          <div className="text-sm font-medium text-gray-700">Creating Intelligent Medical Note</div>
+                        )}
                         <div className="text-xs text-gray-500 mt-1">
                           {isTranscribing && 'Converting speech to text...'}
                           {isAiCategorizing && 'Categorizing content with ICD-10 codes...'}
+                          {isGeneratingIntelligentNote && '🧠 AI analyzing clinical content and formatting professionally...'}
                         </div>
                       </div>
                     </div>
@@ -474,27 +563,90 @@ export function TemplatedTranscriptionScreen({ patient, onBack, onSaveSession }:
           {/* Template/Transcription Section */}
           <div className="space-y-6">
             {selectedTemplate ? (
-              <Card className="bg-white border-gray-200">
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <FileText className="w-5 h-5 text-blue-600" />
-                      {selectedTemplate.name}
-                    </div>
-                    {autoCategorizationEnabled && rawTranscription && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => aiCategorizeTranscription(rawTranscription, selectedTemplate)}
-                        disabled={isAiCategorizing}
-                        className="text-xs"
-                      >
-                        <Sparkles className="w-3 h-3 mr-1" />
-                        {isAiCategorizing ? 'Analyzing...' : 'AI Analysis'}
-                      </Button>
-                    )}
-                  </CardTitle>
-                </CardHeader>
+              <div className="space-y-4">
+                {/* View Toggle */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center bg-gray-100 rounded-lg p-1">
+                    <button
+                      onClick={() => setShowIntelligentView(true)}
+                      className={`px-3 py-1 text-xs rounded-md transition-colors ${
+                        showIntelligentView
+                          ? 'bg-blue-600 text-white'
+                          : 'text-gray-600 hover:text-gray-900'
+                      }`}
+                    >
+                      🧠 Intelligent View
+                    </button>
+                    <button
+                      onClick={() => setShowIntelligentView(false)}
+                      className={`px-3 py-1 text-xs rounded-md transition-colors ${
+                        !showIntelligentView
+                          ? 'bg-gray-600 text-white'
+                          : 'text-gray-600 hover:text-gray-900'
+                      }`}
+                    >
+                      📝 Template View
+                    </button>
+                  </div>
+                  
+                  {autoCategorizationEnabled && rawTranscription && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => showIntelligentView 
+                        ? generateIntelligentNote(rawTranscription, selectedTemplate)
+                        : aiCategorizeTranscription(rawTranscription, selectedTemplate)
+                      }
+                      disabled={isAiCategorizing || isGeneratingIntelligentNote}
+                      className="text-xs"
+                    >
+                      <Sparkles className="w-3 h-3 mr-1" />
+                      {(isAiCategorizing || isGeneratingIntelligentNote) ? 'Analyzing...' : 'AI Analysis'}
+                    </Button>
+                  )}
+                </div>
+
+                {/* Intelligent View */}
+                {showIntelligentView ? (
+                  <IntelligentMedicalNote
+                    analysis={intelligentAnalysis}
+                    isGenerating={isGeneratingIntelligentNote}
+                    onSectionEdit={(sectionId, newContent) => {
+                      if (intelligentAnalysis && intelligentAnalysis.formattedSections) {
+                        const updatedAnalysis = {
+                          ...intelligentAnalysis,
+                          formattedSections: intelligentAnalysis.formattedSections.map(section =>
+                            section.sectionId === sectionId 
+                              ? { ...section, content: newContent }
+                              : section
+                          )
+                        };
+                        setIntelligentAnalysis(updatedAnalysis);
+                        
+                        // Update template data too
+                        setTemplateData(prev => ({
+                          ...prev,
+                          [sectionId]: newContent
+                        }));
+                      }
+                    }}
+                    onRegenerate={() => {
+                      if (rawTranscription && selectedTemplate) {
+                        generateIntelligentNote(rawTranscription, selectedTemplate);
+                      }
+                    }}
+                  />
+                ) : (
+                  /* Template View */
+                  <Card className="bg-white border-gray-200">
+                    <CardHeader>
+                      <CardTitle className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <FileText className="w-5 h-5 text-blue-600" />
+                          {selectedTemplate.name}
+                        </div>
+                      </CardTitle>
+                    </CardHeader>
                 <CardContent className="space-y-4">
                   {selectedTemplate.sections.map((section) => {
                     const sectionType = SECTION_TYPES[section.type as keyof typeof SECTION_TYPES];
@@ -537,8 +689,10 @@ export function TemplatedTranscriptionScreen({ patient, onBack, onSaveSession }:
                       </div>
                     );
                   })}
-                </CardContent>
-              </Card>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
             ) : (
               <Card className="bg-white border-gray-200">
                 <CardContent className="p-8 text-center">
@@ -554,6 +708,49 @@ export function TemplatedTranscriptionScreen({ patient, onBack, onSaveSession }:
                     <FileText className="w-4 h-4 mr-2" />
                     Select Template
                   </Button>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Session Timeline */}
+            {currentSession && (
+              <Card className="bg-white border-gray-200">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-sm font-medium text-gray-900">
+                    <Clock className="w-4 h-4" />
+                    Recording Timeline
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="text-gray-500">Started:</span>
+                        <div className="font-medium">{formatTimestamp(currentSession.startTime.getTime())}</div>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Total Duration:</span>
+                        <div className="font-medium">{formatDuration(duration)}</div>
+                      </div>
+                    </div>
+                    
+                    {currentSession.segments.length > 1 && (
+                      <div className="border-t pt-3">
+                        <div className="text-xs text-gray-500 mb-2">Recording Segments:</div>
+                        <div className="space-y-1">
+                          {currentSession.segments.map((segment, index) => (
+                            <div key={segment.id} className="flex justify-between items-center text-xs bg-gray-50 rounded p-2">
+                              <span>Segment {index + 1}</span>
+                              <span className="text-gray-600">
+                                {formatTimestamp(segment.startTime)} - {segment.endTime ? formatTimestamp(segment.endTime) : 'Recording...'}
+                              </span>
+                              <span className="font-medium">{formatDuration(segment.duration)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             )}

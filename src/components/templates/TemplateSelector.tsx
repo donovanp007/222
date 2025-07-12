@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Template } from "@/types/template";
 import { DEFAULT_TEMPLATES } from "@/data/defaultTemplates";
+import { SA_TEMPLATES } from "@/data/saTemplates";
 
 interface TemplateSelectorProps {
   onTemplateSelect: (template: Template) => void;
@@ -37,15 +38,18 @@ const CATEGORY_LABELS = {
 export function TemplateSelector({ onTemplateSelect, selectedTemplateId, className }: TemplateSelectorProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [templateSet, setTemplateSet] = useState<'international' | 'south-africa'>('south-africa');
 
-  const filteredTemplates = DEFAULT_TEMPLATES.filter(template => {
+  const currentTemplates = templateSet === 'south-africa' ? SA_TEMPLATES : DEFAULT_TEMPLATES;
+
+  const filteredTemplates = currentTemplates.filter(template => {
     const matchesSearch = template.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          template.description.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = selectedCategory === "all" || template.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
 
-  const categories = Array.from(new Set(DEFAULT_TEMPLATES.map(t => t.category)));
+  const categories = Array.from(new Set(currentTemplates.map(t => t.category)));
 
   return (
     <div className={`space-y-6 ${className}`}>
@@ -55,9 +59,34 @@ export function TemplateSelector({ onTemplateSelect, selectedTemplateId, classNa
           <h2 className="text-xl font-semibold text-gray-900">Select Template</h2>
           <p className="text-sm text-gray-500 mt-1">Choose a template to structure your medical notes</p>
         </div>
-        <Badge variant="outline" className="text-xs">
-          {filteredTemplates.length} templates
-        </Badge>
+        <div className="flex items-center gap-3">
+          {/* Template Set Toggle */}
+          <div className="flex items-center bg-gray-100 rounded-lg p-1">
+            <button
+              onClick={() => setTemplateSet('south-africa')}
+              className={`px-3 py-1 text-xs rounded-md transition-colors ${
+                templateSet === 'south-africa'
+                  ? 'bg-green-600 text-white'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              🇿🇦 SA Templates
+            </button>
+            <button
+              onClick={() => setTemplateSet('international')}
+              className={`px-3 py-1 text-xs rounded-md transition-colors ${
+                templateSet === 'international'
+                  ? 'bg-blue-600 text-white'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              🌍 International
+            </button>
+          </div>
+          <Badge variant="outline" className="text-xs">
+            {filteredTemplates.length} templates
+          </Badge>
+        </div>
       </div>
 
       {/* Search and Filters */}

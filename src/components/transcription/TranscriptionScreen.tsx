@@ -64,8 +64,9 @@ export function TranscriptionScreen({ patient, onBack, onSaveSession }: Transcri
     setTranscriptionError(null);
     
     try {
-      const text = await transcribeAudio(audioBlob, apiKey);
-      setTranscriptionText(text);
+      const result = await transcribeAudio(audioBlob, apiKey, 'auto');
+      const transcriptionText = typeof result === 'string' ? result : result.text;
+      setTranscriptionText(transcriptionText);
     } catch (error) {
       console.error("Transcription failed:", error);
       setTranscriptionError("Transcription failed. Please check your API key and try again.");

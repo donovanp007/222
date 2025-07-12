@@ -1,5 +1,6 @@
 import { SectionType, TemplateSection, Template } from "@/types/template";
-import { getStoredApiKey } from "@/components/settings/ApiSettings";
+import { getStoredApiKey, getSelectedAIModel } from "@/components/settings/ApiSettings";
+import { trackCategorization } from "./apiUsageTracker";
 
 // Medical terminology and keywords for better categorization
 const MEDICAL_KEYWORDS = {
@@ -388,6 +389,7 @@ export async function aiCategorizeContent(
   }
 
   const prompt = createCategorizationPrompt(transcription, template);
+  const selectedModel = getSelectedAIModel();
   
   try {
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -397,13 +399,13 @@ export async function aiCategorizeContent(
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4',
+        model: selectedModel,
         messages: [{
           role: 'user',
           content: prompt
         }],
         temperature: 0.1,
-        max_tokens: 2000
+        max_tokens: selectedModel === 'gpt-3.5-turbo' ? 1500 : 2000
       })
     });
 
@@ -413,6 +415,9 @@ export async function aiCategorizeContent(
 
     const data = await response.json();
     const result = JSON.parse(data.choices[0].message.content);
+    
+    // Track API usage
+    trackCategorization(transcription.length);
     
     return result;
   } catch (error) {
