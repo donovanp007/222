@@ -1,0 +1,5 @@
+{
+  "buildCommand": "cd ai-medic-scribe && npm run build",
+  "outputDirectory": "ai-medic-scribe/.next",
+  "installCommand": "cd ai-medic-scribe && npm install"
+}
