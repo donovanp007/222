@@ -1,0 +1,354 @@
+# AI Medical Scribe - Production Docker Compose
+# Optimized for DigitalOcean deployment with security hardening
+
+version: '3.8'
+
+services:
+  # Main application service
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runner  # Use production runner stage
+    container_name: ai-medic-scribe-prod
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3000:3000"  # Bind to localhost only, nginx will proxy
+    volumes:
+      # Persistent data storage
+      - mediscribe_data:/app/data
+      - mediscribe_logs:/app/logs
+      - mediscribe_uploads:/app/uploads
+    environment:
+      - NODE_ENV=production
+      - NEXT_TELEMETRY_DISABLED=1
+      - PORT=3000
+      - HOSTNAME=0.0.0.0
+      # Security headers
+      - FORCE_HTTPS=true
+      - TRUST_PROXY=true
+      # Redis connection
+      - REDIS_URL=redis://redis:6379
+      # Database connection
+      - DATABASE_URL=postgresql://mediscribe:${POSTGRES_PASSWORD}@postgres:5432/mediscribe_prod
+      # Session security
+      - SESSION_SECRET=${SESSION_SECRET}
+      - JWT_SECRET=${JWT_SECRET}
+      # File storage
+      - STORAGE_ENDPOINT=minio:9000
+      - STORAGE_ACCESS_KEY=${MINIO_ACCESS_KEY}
+      - STORAGE_SECRET_KEY=${MINIO_SECRET_KEY}
+      # Email configuration
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT}
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASS=${SMTP_PASS}
+      # AI API keys (encrypted)
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - CLAUDE_API_KEY=${CLAUDE_API_KEY}
+    networks:
+      - mediscribe-internal
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '1'
+          memory: 1G
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/tmp
+
+  # Nginx reverse proxy with SSL termination
+  nginx:
+    image: nginx:alpine
+    container_name: ai-medic-scribe-nginx-prod
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/nginx/prod.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./docker/nginx/ssl:/etc/nginx/ssl:ro
+      - mediscribe_static:/var/www/static:ro
+      # Log files for monitoring
+      - mediscribe_nginx_logs:/var/log/nginx
+    environment:
+      - DOMAIN_NAME=${DOMAIN_NAME}
+    depends_on:
+      - app
+    networks:
+      - mediscribe-internal
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 64M
+    security_opt:
+      - no-new-privileges:true
+
+  # Redis for session storage and caching
+  redis:
+    image: redis:7-alpine
+    container_name: ai-medic-scribe-redis-prod
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:6379:6379"  # Internal access only
+    volumes:
+      - redis_data:/data
+      - ./docker/redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    command: redis-server /usr/local/etc/redis/redis.conf
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    networks:
+      - mediscribe-internal
+    healthcheck:
+      test: ["CMD", "redis-cli", "--no-auth-warning", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
+    security_opt:
+      - no-new-privileges:true
+
+  # PostgreSQL database
+  postgres:
+    image: postgres:15-alpine
+    container_name: ai-medic-scribe-postgres-prod
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5432:5432"  # Internal access only
+    environment:
+      POSTGRES_DB: mediscribe_prod
+      POSTGRES_USER: mediscribe
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_INITDB_ARGS: --auth-host=scram-sha-256
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init-prod.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - postgres_backups:/backups
+    networks:
+      - mediscribe-internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mediscribe -d mediscribe_prod"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    security_opt:
+      - no-new-privileges:true
+
+  # MinIO for S3-compatible file storage
+  minio:
+    image: minio/minio
+    container_name: ai-medic-scribe-minio-prod
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:9000:9000"  # API - internal only
+      - "127.0.0.1:9001:9001"  # Console - internal only
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
+      MINIO_REGION: za-west-1
+      MINIO_BROWSER_REDIRECT_URL: https://${DOMAIN_NAME}/minio
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    networks:
+      - mediscribe-internal
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
+    security_opt:
+      - no-new-privileges:true
+
+  # Backup service for automated backups
+  backup:
+    image: postgres:15-alpine
+    container_name: ai-medic-scribe-backup
+    restart: unless-stopped
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_backups:/backups
+      - ./docker/backup/backup.sh:/backup.sh:ro
+    command: ["sh", "-c", "while true; do sleep 6h; /backup.sh; done"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - mediscribe-internal
+    deploy:
+      resources:
+        limits:
+          cpus: '0.2'
+          memory: 128M
+        reservations:
+          cpus: '0.05'
+          memory: 32M
+
+  # Log aggregation and monitoring
+  promtail:
+    image: grafana/promtail:latest
+    container_name: ai-medic-scribe-promtail
+    restart: unless-stopped
+    volumes:
+      - mediscribe_logs:/var/log/app:ro
+      - mediscribe_nginx_logs:/var/log/nginx:ro
+      - ./docker/promtail/config.yml:/etc/promtail/config.yml:ro
+    command: -config.file=/etc/promtail/config.yml
+    networks:
+      - mediscribe-internal
+    deploy:
+      resources:
+        limits:
+          cpus: '0.1'
+          memory: 64M
+
+  # SSL certificate renewal (Let's Encrypt)
+  certbot:
+    image: certbot/certbot
+    container_name: ai-medic-scribe-certbot
+    volumes:
+      - ./docker/nginx/ssl:/etc/letsencrypt
+      - mediscribe_static:/var/www/certbot
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+    depends_on:
+      - nginx
+
+volumes:
+  # Application data
+  mediscribe_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/mediscribe/data
+
+  # Application logs
+  mediscribe_logs:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/mediscribe/logs
+
+  # File uploads
+  mediscribe_uploads:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/mediscribe/uploads
+
+  # Static files for nginx
+  mediscribe_static:
+    driver: local
+
+  # Nginx logs
+  mediscribe_nginx_logs:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/mediscribe/nginx-logs
+
+  # Redis data
+  redis_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/mediscribe/redis
+
+  # PostgreSQL data
+  postgres_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/mediscribe/postgres
+
+  # Database backups
+  postgres_backups:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/mediscribe/backups
+
+  # MinIO object storage
+  minio_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/mediscribe/minio
+
+networks:
+  mediscribe-internal:
+    driver: bridge
+    internal: false
+    ipam:
+      config:
+        - subnet: 172.21.0.0/16
+    driver_opts:
+      com.docker.network.bridge.name: mediscribe-br0
+
+# Security and resource limits
+x-security-opts: &default-security-opts
+  - no-new-privileges:true
+  - seccomp:unconfined
+
+x-logging: &default-logging
+  driver: "json-file"
+  options:
+    max-size: "10m"
+    max-file: "3"

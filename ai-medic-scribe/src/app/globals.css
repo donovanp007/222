@@ -1,0 +1,189 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --radius: 0.75rem;
+  --background: 0 0% 100%;
+  --foreground: 222.2 84% 4.9%;
+  --card: 0 0% 100%;
+  --card-foreground: 222.2 84% 4.9%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222.2 84% 4.9%;
+  --primary: 221.2 83.2% 53.3%; /* Medical blue #007AFF */
+  --primary-foreground: 210 40% 98%;
+  --secondary: 210 40% 96%;
+  --secondary-foreground: 222.2 84% 4.9%;
+  --muted: 210 40% 96%;
+  --muted-foreground: 215.4 16.3% 46.9%;
+  --accent: 210 40% 96%;
+  --accent-foreground: 222.2 84% 4.9%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 214.3 31.8% 91.4%;
+  --input: 214.3 31.8% 91.4%;
+  --ring: 221.2 83.2% 53.3%;
+}
+
+.dark {
+  --background: 222.2 84% 4.9%;
+  --foreground: 210 40% 98%;
+  --card: 222.2 84% 4.9%;
+  --card-foreground: 210 40% 98%;
+  --popover: 222.2 84% 4.9%;
+  --popover-foreground: 210 40% 98%;
+  --primary: 210 40% 98%;
+  --primary-foreground: 222.2 84% 4.9%;
+  --secondary: 217.2 32.6% 17.5%;
+  --secondary-foreground: 210 40% 98%;
+  --muted: 217.2 32.6% 17.5%;
+  --muted-foreground: 215 20.2% 65.1%;
+  --accent: 217.2 32.6% 17.5%;
+  --accent-foreground: 210 40% 98%;
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 217.2 32.6% 17.5%;
+  --input: 217.2 32.6% 17.5%;
+  --ring: 212.7 26.8% 83.9%;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* iOS-inspired animations and effects */
+@layer utilities {
+  .smooth-appear {
+    animation: smooth-appear 0.3s ease-out;
+  }
+  
+  @keyframes smooth-appear {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  /* Futuristic AI Recording Interface Effects */
+  .drop-shadow-glow {
+    filter: drop-shadow(0 0 8px rgba(34, 211, 238, 0.6));
+  }
+  
+  .animation-delay-75 {
+    animation-delay: 75ms;
+  }
+  
+  .animation-delay-500 {
+    animation-delay: 500ms;
+  }
+  
+  .animation-delay-1000 {
+    animation-delay: 1000ms;
+  }
+  
+  .animation-delay-1500 {
+    animation-delay: 1500ms;
+  }
+  
+  .blur-xs {
+    filter: blur(2px);
+  }
+  
+  /* Holographic scanline effect */
+  .scanlines {
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(34, 211, 238, 0.1) 50%,
+      transparent 100%
+    );
+    animation: scanline 2s linear infinite;
+  }
+  
+  @keyframes scanline {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(400px); }
+  }
+  
+  /* Glitch effect for AI processing */
+  .glitch {
+    animation: glitch 1s infinite;
+  }
+  
+  @keyframes glitch {
+    0%, 100% { transform: translate(0); }
+    20% { transform: translate(-2px, 2px); }
+    40% { transform: translate(-2px, -2px); }
+    60% { transform: translate(2px, 2px); }
+    80% { transform: translate(2px, -2px); }
+  }
+  
+  /* Floating particles animation */
+  .float-particle {
+    animation: float 3s ease-in-out infinite;
+  }
+  
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+  }
+  
+  /* Pulsing neural network effect */
+  .neural-pulse {
+    animation: neural-pulse 2s ease-in-out infinite;
+  }
+  
+  @keyframes neural-pulse {
+    0%, 100% { 
+      box-shadow: 0 0 20px rgba(34, 211, 238, 0.3);
+      transform: scale(1);
+    }
+    50% { 
+      box-shadow: 0 0 40px rgba(34, 211, 238, 0.6);
+      transform: scale(1.05);
+    }
+  }
+  
+  /* Holographic border effect */
+  .holo-border {
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .holo-border::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(34, 211, 238, 0.2),
+      transparent
+    );
+    animation: holo-sweep 3s infinite;
+  }
+  
+  @keyframes holo-sweep {
+    0% { left: -100%; }
+    100% { left: 100%; }
+  }
+}
