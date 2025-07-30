@@ -31,7 +31,7 @@ export function AdvancedSearch({ onSelectResult }: AdvancedSearchProps) {
   const [searchInDiagnosis, setSearchInDiagnosis] = useState(true);
   const [searchInMedicalAid, setSearchInMedicalAid] = useState(false);
   const [dateRange, setDateRange] = useState<{ start: string; end: string }>({ start: "", end: "" });
-  const [selectedSessionType, setSelectedSessionType] = useState<Session['sessionType'] | "">("");
+  const [selectedSessionType, setSelectedSessionType] = useState<Session['consultationType'] | "">("");
 
   const searchEngine = new AdvancedSearchEngine(allPatients, sessions);
 
@@ -226,7 +226,7 @@ export function AdvancedSearch({ onSelectResult }: AdvancedSearchProps) {
                 <Label className="text-sm font-medium text-gray-700 mb-2 block">Session Type</Label>
                 <select
                   value={selectedSessionType}
-                  onChange={(e) => setSelectedSessionType(e.target.value as Session['sessionType'] | "")}
+                  onChange={(e) => setSelectedSessionType(e.target.value as Session['consultationType'] | "")}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">All Types</option>
@@ -279,7 +279,7 @@ export function AdvancedSearch({ onSelectResult }: AdvancedSearchProps) {
                             {highlightQuery(`${result.patient.name} ${result.patient.surname}`, query)}
                           </h3>
                           <Badge variant="secondary" className="text-xs">
-                            {result.matchType === 'patient' ? 'Patient' : 'Session'}
+                            {result.matchType === 'patient' ? 'Patient' : 'Consultation'}
                           </Badge>
                           <Badge variant="outline" className="text-xs">
                             {Math.round(result.relevanceScore * 100)}% match
@@ -300,7 +300,7 @@ export function AdvancedSearch({ onSelectResult }: AdvancedSearchProps) {
                                 <span>{formatDate(result.session.visitDate)}</span>
                               </div>
                               <Badge variant="outline" className="text-xs">
-                                {result.session.sessionType}
+                                {result.session.consultationType}
                               </Badge>
                             </div>
                           </div>
@@ -321,7 +321,7 @@ export function AdvancedSearch({ onSelectResult }: AdvancedSearchProps) {
 
                       <div className="flex items-center space-x-2">
                         {result.matchType === 'patient' && <User className="w-4 h-4 text-blue-500" />}
-                        {result.matchType === 'session' && <FileText className="w-4 h-4 text-green-500" />}
+                        {result.matchType === 'consultation' && <FileText className="w-4 h-4 text-green-500" />}
                       </div>
                     </div>
                   </CardContent>

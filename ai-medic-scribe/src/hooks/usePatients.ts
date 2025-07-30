@@ -20,7 +20,7 @@ const initialPatients: Patient[] = [
     idNumber: "7903155678901",
     createdAt: new Date("2024-01-15"),
     lastVisit: new Date("2024-07-10"),
-    sessionCount: 12,
+    consultationCount: 12,
     isArchived: false,
     assignedDoctors: ["dr_001"]
   },
@@ -38,7 +38,7 @@ const initialPatients: Patient[] = [
     },
     createdAt: new Date("2024-02-20"),
     lastVisit: new Date("2024-07-08"),
-    sessionCount: 8,
+    consultationCount: 8,
     isArchived: false,
     assignedDoctors: ["dr_001"]
   },
@@ -56,7 +56,7 @@ const initialPatients: Patient[] = [
     },
     createdAt: new Date("2024-03-10"),
     lastVisit: new Date("2024-07-05"),
-    sessionCount: 15,
+    consultationCount: 15,
     isArchived: false,
     assignedDoctors: ["dr_001", "dr_002"]
   },
@@ -69,7 +69,7 @@ const initialPatients: Patient[] = [
     contact: "+27 85 777 8888",
     createdAt: new Date("2024-01-08"),
     lastVisit: new Date("2024-06-30"),
-    sessionCount: 6,
+    consultationCount: 6,
     isArchived: false,
     assignedDoctors: ["dr_001"]
   },
@@ -236,7 +236,7 @@ export function usePatients() {
   };
 
   const getTotalSessions = () => {
-    return patients.reduce((total, patient) => total + patient.sessionCount, 0);
+    return patients.reduce((total, patient) => total + patient.consultationCount, 0);
   };
 
   const getTodaySessions = () => {

@@ -60,7 +60,7 @@ export function NewPatientModal({ children, onPatientCreated }: NewPatientModalP
       age: parseInt(formData.age),
       contact: formData.contact.trim() || undefined,
       createdAt: new Date(),
-      sessionCount: 0,
+      consultationCount: 0,
     };
 
     onPatientCreated(newPatient);

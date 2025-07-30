@@ -303,7 +303,7 @@ export function TemplatedTranscriptionScreen({ patient, onBack, onSaveSession }:
         ...templateData,
         ...(manualNotes.trim() && { manual_notes: manualNotes }),
         patient_name: patient.name,
-        patient_age: patient.age,
+        patient_age: patient.age.toString(),
         session_date: new Date().toISOString(),
         duration: formatDuration(duration)
       };

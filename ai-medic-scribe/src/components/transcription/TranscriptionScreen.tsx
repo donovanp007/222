@@ -14,13 +14,14 @@ import { createRealTimeProcessor, StreamingAnalysisResult } from "@/utils/realTi
 import { performPredictiveAnalysis, AutoCompletionSuggestion } from "@/utils/predictiveFeatures";
 import { performClinicalDecisionSupport, ContraindicationAlert, RiskFactor } from "@/utils/clinicalDecisionSupport";
 import { extractMedications } from "@/utils/contentCategorization";
-import { defaultTemplates } from "@/data/defaultTemplates";
+import { DEFAULT_TEMPLATES } from "@/data/defaultTemplates";
 import { AILearningPanel } from "./AILearningPanel";
 import { useAILearning } from "@/hooks/useAILearning";
-import PrescriptionManager from "@/components/prescriptions/PrescriptionManager";
-import FollowUpManager from "@/components/followup/FollowUpManager";
-import TranslationPanel from "@/components/translation/TranslationPanel";
-import EnhancedAudioUpload from "@/components/audio/EnhancedAudioUpload";
+// TODO: Create missing components
+// import PrescriptionManager from "@/components/prescriptions/PrescriptionManager";
+// import FollowUpManager from "@/components/followup/FollowUpManager";
+// import TranslationPanel from "@/components/translation/TranslationPanel";
+// import EnhancedAudioUpload from "@/components/audio/EnhancedAudioUpload";
 import { useGPT4oMiniTranscription } from "@/utils/gpt4oMiniTranscription";
 import AIPatientDocumentGenerator from "@/components/documents/AIPatientDocumentGenerator";
 
@@ -82,7 +83,7 @@ export function TranscriptionScreen({ patient, onBack, onSaveSession, patientHis
 
   // Initialize real-time processor
   useEffect(() => {
-    const template = defaultTemplates[0]; // Use default template for now
+    const template = DEFAULT_TEMPLATES[0]; // Use default template for now
     const processor = createRealTimeProcessor(template);
     setRealTimeProcessor(processor);
   }, []);
@@ -473,19 +474,18 @@ export function TranscriptionScreen({ patient, onBack, onSaveSession, patientHis
                     content={transcriptionText}
                     onChange={handleTextChange}
                     placeholder="Transcribed text will appear here... AI will provide intelligent suggestions as you type."
-                    className="min-h-[200px] border-gray-200 focus:border-blue-500 focus:ring-blue-500"
                     minHeight="200px"
                   />
 
-                  {/* Translation Panel */}
-                  <TranslationPanel
+                  {/* Translation Panel - TODO: Create component */}
+                  {/* <TranslationPanel
                     originalText={transcriptionText}
                     onTranslationUpdate={(translatedText) => {
                       setTranscriptionText(translatedText);
                     }}
                     autoTranslate={true}
                     showConfidence={true}
-                  />
+                  /> */}
                   
                   {/* Auto-completion suggestions */}
                   {autoCompletions.length > 0 && (
@@ -670,17 +670,17 @@ export function TranscriptionScreen({ patient, onBack, onSaveSession, patientHis
                 </div>
               )}
 
-              {/* Prescription Manager */}
-              <PrescriptionManager
+              {/* Prescription Manager - TODO: Create component */}
+              {/* <PrescriptionManager
                 patient={patient}
                 transcriptionText={transcriptionText}
                 onPrescriptionGenerated={(prescription) => {
                   console.log('Prescription generated:', prescription);
                 }}
-              />
+              /> */}
 
-              {/* Follow-up Manager */}
-              <FollowUpManager
+              {/* Follow-up Manager - TODO: Create component */}
+              {/* <FollowUpManager
                 patient={patient}
                 consultation={{
                   id: `temp_consultation_${Date.now()}`,
@@ -698,10 +698,10 @@ export function TranscriptionScreen({ patient, onBack, onSaveSession, patientHis
                 onFollowUpScheduled={(reminder) => {
                   console.log('Follow-up scheduled:', reminder);
                 }}
-              />
+              /> */}
 
-              {/* Enhanced Audio Upload */}
-              <EnhancedAudioUpload
+              {/* Enhanced Audio Upload - TODO: Create component */}
+              {/* <EnhancedAudioUpload
                 patient={patient}
                 onTranscriptionComplete={(audioFile, transcription) => {
                   setTranscriptionText(prev => prev + '\n\n' + transcription);
@@ -711,7 +711,7 @@ export function TranscriptionScreen({ patient, onBack, onSaveSession, patientHis
                   console.log('Audio file stored:', audioFile);
                 }}
                 allowOfflineStorage={true}
-              />
+              /> */}
 
               {/* AI Patient Document Generator */}
               <AIPatientDocumentGenerator

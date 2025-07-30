@@ -204,7 +204,7 @@ export function ArchiveManager() {
 
                   <div className="flex items-center space-x-2">
                     <Badge variant="outline" className="text-xs">
-                      {patient.sessionCount} sessions
+                      {patient.consultationCount} sessions
                     </Badge>
                     
                     <Button
@@ -253,7 +253,7 @@ export function ArchiveManager() {
                       {selectedPatient.name} {selectedPatient.surname}
                     </h3>
                     <p className="text-sm text-gray-600">
-                      Age {selectedPatient.age} • {selectedPatient.sessionCount} sessions
+                      Age {selectedPatient.age} • {selectedPatient.consultationCount} sessions
                     </p>
                   </div>
                 </div>

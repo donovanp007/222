@@ -53,7 +53,7 @@ ${patient.medicalAid ? `### Medical Aid Information
 ` : ''}## Session Details
 - **Session Title:** ${session.title}
 - **Visit Date:** ${visitDate.toLocaleDateString('en-ZA')} at ${visitDate.toLocaleTimeString('en-ZA')}
-- **Session Type:** ${session.sessionType.charAt(0).toUpperCase() + session.sessionType.slice(1).replace('-', ' ')}
+- **Session Type:** ${session.consultationType.charAt(0).toUpperCase() + session.consultationType.slice(1).replace('-', ' ')}
 - **Doctor:** ${session.doctorId || 'Current User'}
 
 ${session.diagnosis && session.diagnosis.length > 0 ? `## Diagnosis
@@ -394,7 +394,7 @@ This transcription has been generated and processed using AI Medical Scribe Plat
             </div>
             <div className="flex items-center gap-2">
               <FileText className="w-4 h-4 text-gray-500" />
-              <span>{session.sessionType}</span>
+              <span>{session.consultationType}</span>
             </div>
             <div className="flex items-center gap-2">
               <Clock className="w-4 h-4 text-gray-500" />

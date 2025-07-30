@@ -56,7 +56,7 @@ const mockSessions: Session[] = [
     createdAt: new Date("2024-07-10T09:30:00"),
     updatedAt: new Date("2024-07-10T10:15:00"),
     doctorId: "dr1",
-    sessionType: "consultation",
+    consultationType: "consultation",
     diagnosis: ["Essential hypertension", "Type 2 diabetes mellitus"],
     isLocked: true,
     suggestedTasks: [
@@ -80,7 +80,7 @@ const mockSessions: Session[] = [
     createdAt: new Date("2024-06-25T14:20:00"),
     updatedAt: new Date("2024-06-25T14:45:00"),
     doctorId: "dr1",
-    sessionType: "follow-up",
+    consultationType: "follow-up",
     diagnosis: ["Essential hypertension - controlled", "Type 2 diabetes mellitus - improving"],
     isLocked: true
   },
@@ -93,7 +93,7 @@ const mockSessions: Session[] = [
     createdAt: new Date("2024-05-15T11:00:00"),
     updatedAt: new Date("2024-05-15T11:30:00"),
     doctorId: "dr1",
-    sessionType: "consultation",
+    consultationType: "consultation",
     diagnosis: ["Chest pain - non-cardiac"],
     isLocked: true
   },
@@ -140,7 +140,7 @@ export function PatientProfile({ patient, onBack, onEditPatient, onDeletePatient
             createdAt: new Date(session.date),
             updatedAt: new Date(session.date),
             doctorId: "current-doctor",
-            sessionType: "consultation" as const,
+            consultationType: "consultation" as const,
             templateData: session.templateData,
           }));
           
@@ -612,8 +612,8 @@ export function PatientProfile({ patient, onBack, onEditPatient, onDeletePatient
                                 >
                                   <Share2 className="w-3 h-3" />
                                 </Button>
-                                <Badge variant={session.sessionType === 'consultation' ? 'default' : 'secondary'}>
-                                  {session.sessionType}
+                                <Badge variant={session.consultationType === 'consultation' ? 'default' : 'secondary'}>
+                                  {session.consultationType}
                                 </Badge>
                                 <span className="text-xs text-gray-500">{getTimeAgo(session.visitDate)}</span>
                               </div>
@@ -646,13 +646,9 @@ export function PatientProfile({ patient, onBack, onEditPatient, onDeletePatient
             {activeTab === 'profile' && (
               <EnhancedPatientProfile
                 patient={patient}
-                onUpdate={(updatedPatient) => {
+                onPatientUpdate={(updatedPatient) => {
                   console.log('Patient profile updated:', updatedPatient);
                   // Here you would typically call onEditPatient if available
-                }}
-                isEditing={false}
-                onToggleEdit={() => {
-                  console.log('Toggle edit mode');
                 }}
               />
             )}
@@ -681,8 +677,8 @@ export function PatientProfile({ patient, onBack, onEditPatient, onDeletePatient
                       <div key={session.id} className="flex items-start space-x-4">
                         <div className="flex-shrink-0">
                           <div className={`w-3 h-3 rounded-full ${
-                            session.sessionType === 'consultation' ? 'bg-blue-500' :
-                            session.sessionType === 'follow-up' ? 'bg-green-500' :
+                            session.consultationType === 'consultation' ? 'bg-blue-500' :
+                            session.consultationType === 'follow-up' ? 'bg-green-500' :
                             'bg-gray-400'
                           }`} />
                           {index < sessions.length - 1 && (

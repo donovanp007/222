@@ -585,7 +585,6 @@ export function AIPatientDocumentGenerator({
                     content={editableContent}
                     onChange={setEditableContent}
                     minHeight="400px"
-                    className="border-gray-300"
                   />
                   <div className="flex justify-end space-x-2">
                     <Button variant="outline" onClick={() => setIsEditing(false)}>

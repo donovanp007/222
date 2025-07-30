@@ -18,20 +18,23 @@ const createSection = (
   keywords
 });
 
+// Helper function to create default usage stats
+const createDefaultUsage = () => ({
+  totalUses: 0,
+  lastUsed: null,
+  averageCompletionTime: 0,
+  userRating: 0
+});
+
 // General Consultation Template
 const generalConsultationTemplate: Template = {
   id: 'general-consultation',
   name: 'General Consultation',
   description: 'Standard template for routine medical consultations',
   category: 'consultation',
+  usage: createDefaultUsage(),
   specialty: 'General Practice',
   isDefault: true,
-  usage: {
-    totalUses: 0,
-    lastUsed: null,
-    averageCompletionTime: 0,
-    userRating: 0
-  },
   createdAt: new Date(),
   updatedAt: new Date(),
   sections: [
@@ -164,6 +167,12 @@ const basicTemplate: Template = {
   isDefault: true,
   createdAt: new Date(),
   updatedAt: new Date(),
+  usage: {
+    totalUses: 0,
+    lastUsed: null,
+    averageCompletionTime: 0,
+    userRating: 0
+  },
   sections: [
     createSection('symptoms', 'Symptoms', 1, true, 'What symptoms is the patient experiencing?'),
     createSection('examination', 'Examination', 2, false, 'Key examination findings...'),

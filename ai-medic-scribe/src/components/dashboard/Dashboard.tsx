@@ -139,7 +139,7 @@ export function Dashboard() {
       const updatedPatient = {
         ...selectedPatient,
         lastSession: new Date().toISOString(),
-        sessionCount: (selectedPatient.sessionCount || 0) + 1,
+        consultationCount: (selectedPatient.consultationCount || 0) + 1,
       };
       
       // Update patient in localStorage (this should be done through usePatients hook ideally)
@@ -429,7 +429,7 @@ export function Dashboard() {
                       {patient.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
                     </div>
                     <Badge variant="secondary" className="text-xs">
-                      {patient.sessionCount} sessions
+                      {patient.consultationCount} sessions
                     </Badge>
                   </div>
 
@@ -473,7 +473,7 @@ export function Dashboard() {
                 </h3>
                 <p className="text-xs text-gray-500 mb-2">Age {patient.age}</p>
                 <Badge variant="secondary" className="text-xs">
-                  {patient.sessionCount}
+                  {patient.consultationCount}
                 </Badge>
               </div>
             ))}
@@ -517,7 +517,7 @@ export function Dashboard() {
                 </div>
                 <div className="flex items-center">
                   <Badge variant="secondary" className="text-xs">
-                    {patient.sessionCount} sessions
+                    {patient.consultationCount} sessions
                   </Badge>
                 </div>
                 <div className="flex items-center">

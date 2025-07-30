@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Brain, AlertTriangle, Stethoscope, FlaskConical, 
-  TrendingUp, Clock, Star, Shield, Target, 
+  Clock, Target, 
   ChevronRight, Info, CheckCircle, XCircle,
   Activity, Zap, BookOpen, User
 } from 'lucide-react';

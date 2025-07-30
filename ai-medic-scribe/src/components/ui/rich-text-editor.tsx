@@ -37,3 +37,4 @@ export const RichTextEditor = React.forwardRef<RichTextEditorRef, RichTextEditor
 RichTextEditor.displayName = 'RichTextEditor'
 
 export default RichTextEditor
+export type { RichTextEditorRef }

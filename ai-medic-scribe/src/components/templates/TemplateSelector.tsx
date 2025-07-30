@@ -28,7 +28,8 @@ const CATEGORY_COLORS = {
   specialist: 'bg-indigo-100 text-indigo-700',
   diagnostic: 'bg-cyan-100 text-cyan-700',
   screening: 'bg-teal-100 text-teal-700',
-  preventive: 'bg-emerald-100 text-emerald-700'
+  preventive: 'bg-emerald-100 text-emerald-700',
+  custom: 'bg-pink-100 text-pink-700'
 };
 
 const CATEGORY_LABELS = {
@@ -41,7 +42,8 @@ const CATEGORY_LABELS = {
   specialist: 'Specialist',
   diagnostic: 'Diagnostic',
   screening: 'Screening',
-  preventive: 'Preventive'
+  preventive: 'Preventive',
+  custom: 'Custom'
 };
 
 export function TemplateSelector({ onTemplateSelect, selectedTemplateId, className }: TemplateSelectorProps) {

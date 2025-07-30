@@ -250,7 +250,7 @@ export function MiniDashboard({
                   <p className="text-xs text-gray-500 transition-colors duration-300 group-hover:text-blue-600">{formatDate(session.visitDate)}</p>
                 </div>
                 <Badge variant="outline" className="text-xs transition-all duration-300 group-hover:border-blue-400 group-hover:text-blue-700">
-                  {session.sessionType}
+                  {session.consultationType}
                 </Badge>
               </div>
             ))}

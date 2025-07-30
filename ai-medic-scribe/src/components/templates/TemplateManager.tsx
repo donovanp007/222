@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Template } from "@/types/template";
 import { CustomTemplateBuilder } from "./CustomTemplateBuilder";
-import { defaultTemplates } from "@/data/defaultTemplates";
+import { DEFAULT_TEMPLATES } from "@/data/defaultTemplates";
 
 interface TemplateManagerProps {
   onSelectTemplate?: (template: Template) => void;
@@ -41,7 +41,7 @@ export function TemplateManager({ onSelectTemplate, showSelection = false }: Tem
     const customTemplates = JSON.parse(localStorage.getItem('customTemplates') || '[]');
     
     // Combine default templates with custom templates
-    const allTemplates = [...defaultTemplates, ...customTemplates];
+    const allTemplates = [...DEFAULT_TEMPLATES, ...customTemplates];
     setTemplates(allTemplates);
   };
 
@@ -176,7 +176,7 @@ export function TemplateManager({ onSelectTemplate, showSelection = false }: Tem
   };
 
   const categories = [...new Set(templates.map(t => t.category))];
-  const specialties = [...new Set(templates.map(t => t.specialty).filter(Boolean))];
+  const specialties = [...new Set(templates.map(t => t.specialty).filter(Boolean))] as string[];
 
   const formatLastUsed = (date: Date | null) => {
     if (!date) return 'Never';

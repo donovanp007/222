@@ -7,23 +7,20 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { 
   Mail, Send, Save, Calendar, Paperclip, Eye, 
-  Settings, FileText as TemplateIcon, User, Clock,
-  AlertTriangle, CheckCircle, Copy, Trash2,
+  TemplateIcon, User,
+  AlertTriangle, CheckCircle, Trash2,
   FileText, Image as ImageIcon, Video, Mic,
-  Shield, Globe, Star, MoreVertical
+  Shield, MoreVertical
 } from 'lucide-react';
 import { Patient } from '@/types';
 import { MedicalFile } from '@/utils/fileManager';
 import { 
   emailService, 
   EmailTemplate, 
-  EmailMessage, 
-  EmailVariable,
-  validateEmailAddress,
-  formatEmailPreview,
+  EmailMessage,
   calculateEmailPriority
 } from '@/utils/emailService';
 

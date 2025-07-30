@@ -193,12 +193,13 @@ export function CustomTemplateBuilder({ onSave, onCancel, existingTemplate }: Cu
       description: template.description,
       category: template.category as Template['category'],
       specialty: template.specialty,
-      sections: template.sections.map(section => ({
+      sections: template.sections.map((section, index) => ({
         id: section.id,
         title: section.title,
         type: section.type,
         placeholder: section.placeholder,
         required: section.required,
+        order: section.order || index,
         keywords: section.keywords
       })),
       usage: existingTemplate?.usage || {
